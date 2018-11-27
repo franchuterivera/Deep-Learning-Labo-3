@@ -95,20 +95,14 @@ def FCN_Seg(self, is_training=True):
         #--- Use the slim.conv2d_transpose function provided in the presentation
         #--- Tricky part is to calculate kernel as stride is just the upscale factor
         # MAGIC https://cv-tricks.com/image-segmentation/transpose-convolution-in-tensorflow/
-        upscale_factor = 16
-        n_channels = 120
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Upscale 16x time using the stride and rectify output
-        current_up5 = slim.conv2d_transpose(x, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config1_16x_current_up5")
-        current_up5 = tf.nn.relu(current_up5)
-
-        print('-'*40, "\nConfig 1 -- current_up5:\n", '-'*40, '\n')
-        print(current_up5)
+        #current_up5 = slim.conv2d_transpose(x, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config1_16x_current_up5")
+        #current_up5 = tf.nn.relu(current_up5)
+        current_up5 = TransitionUp_elu(x, 120, 16,  "config2_1x_current_up5")
 
         #--- crop if bigger
-        if shape(current_up5) > shape(self.tgt_image) :
-          current_up5 = crop(current_up5, self.tgt_image)
+        current_up5 = crop(current_up5, self.tgt_image)
 
         ########################################################################
 
@@ -131,29 +125,21 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       DB4_skip_connection -- 2x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 256
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up5 = slim.conv2d_transpose(x, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up5")
-        current_up5 = TransitionUp_elu(x, n_channels, upscale_factor,  "config2_2x_current_up5")
+        current_up5 = TransitionUp_elu(x, 256, 2,  "config2_2x_current_up5")
 
         #--- crop the bigger
-        if shape(current_up5)[1:2] > shape(DB4_skip_connection)[1:2] :
-          current_up5 = crop(current_up5, DB4_skip_connection)
-        elif shape(current_up5)[1:2] < shape(DB4_skip_connection)[1:2] :
-          DB4_skip_connection = crop(DB4_skip_connection, current_up5)
+        current_up5 = crop(current_up5, DB4_skip_connection)
+        DB4_skip_connection = crop(DB4_skip_connection, current_up5)
 
         #--- Complying with Figure 1. Concatenation
         current_up5 = Concat_layers(current_up5, DB4_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up5 = slim.conv2d(current_up5, n_channels, [3, 3], scope='config2_2x_conv')
+        current_up5 = tc.layers.conv2d(current_up5, 256, [3, 3], scope='config2_2x_conv')
 
-        print('-'*40, "\nConfig 2 -- DB4_skip_connection:\n", '-'*40, '\n')
-        print(current_up5)
-        print(DB4_skip_connection)
         ########################################################################
 
         # TODO (2.2) - incorporate a upsample function which takes the features from TODO (2.1)
@@ -166,20 +152,13 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       current_up3 -- 8x
         ########################################################################
-        upscale_factor = 8
-        n_channels = 120
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
-        current_up3 = slim.conv2d_transpose(current_up5, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config2_8x_current_up3")
-        current_up3 = tf.nn.relu(current_up3)
-
-        print('-'*40, "\nConfig 2 -- current_up3:\n", '-'*40, '\n')
-        print(current_up3)
+        #current_up3 = slim.conv2d_transpose(current_up5, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config2_8x_current_up3")
+        #current_up3 = tf.nn.relu(current_up3)
+        current_up3 = TransitionUp_elu(current_up5, 120, 8,  "config2_1x_current_up5")
 
         #--- crop if bigger
-        if shape(current_up3)[1:2] > shape(self.tgt_image)[1:2] :
-          print("{} > {}".format(shape(current_up3), shape(self.tgt_image)))
-          current_up3 = crop(current_up3, self.tgt_image)
+        current_up3 = crop(current_up3, self.tgt_image)
         ########################################################################
 
         End_maps_decoder1 = slim.conv2d(current_up3, self.N_classes, [1, 1], scope='Final_decoder') #(batchsize, width, height, N_classes)
@@ -202,29 +181,20 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       DB4_skip_connection -- 2x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 256
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up5 = slim.conv2d_transpose(x, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up5")
-        current_up5 = TransitionUp_elu(x, n_channels , upscale_factor,  "config3_2x_current_up5")
+        current_up5 = TransitionUp_elu(x, 256, 2,  "config3_2x_current_up5")
 
         #--- crop the bigger
-        if shape(current_up5)[1:2] > shape(DB4_skip_connection)[1:2] :
-          current_up5 = crop(current_up5, DB4_skip_connection)
-        elif shape(current_up5)[1:2] < shape(DB4_skip_connection)[1:2] :
-          DB4_skip_connection = crop(DB4_skip_connection, current_up5)
+        current_up5 = crop(current_up5, DB4_skip_connection)
+        DB4_skip_connection = crop(DB4_skip_connection, current_up5)
 
         #--- Complying with Figure 1. Concatenation
         current_up5 = Concat_layers(current_up5, DB4_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up5 = slim.conv2d(current_up5, n_channels, [3, 3], scope='config3_2x_conv')
-
-        print('-'*40, "\nConfig 3 -- DB4_skip_connection:\n", '-'*40, '\n')
-        print(current_up5)
-        print(DB4_skip_connection)
+        current_up5 = slim.conv2d(current_up5, 256, [3, 3], scope='config3_2x_conv')
         ########################################################################
 
 
@@ -234,29 +204,21 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       DB3_skip_connection -- 4x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 160
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up3 = slim.conv2d_transpose(current_up5, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up3")
-        current_up3 = TransitionUp_elu(current_up5, n_channels , upscale_factor,  "config3_4x_current_up3")
+        current_up3 = TransitionUp_elu(current_up5, 160 , 2,  "config3_4x_current_up3")
 
         #--- crop the bigger
-        if shape(current_up3)[1:2] > shape(DB3_skip_connection)[1:2] :
-          current_up3 = crop(current_up3, DB3_skip_connection)
-        elif shape(current_up3)[1:2] < shape(DB3_skip_connection)[1:2] :
-          DB3_skip_connection = crop(DB3_skip_connection, current_up3)
+        current_up3 = crop(current_up3, DB3_skip_connection)
+        DB3_skip_connection = crop(DB3_skip_connection, current_up3)
 
         #--- Complying with Figure 1. Concatenation
         current_up3 = Concat_layers(current_up3, DB3_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up3 = slim.conv2d(current_up3, n_channels, [3, 3], scope='config3_4x_conv')
+        current_up3 = slim.conv2d(current_up3, 160, [3, 3], scope='config3_4x_conv')
 
-        print('-'*40, "\nConfig 3 -- DB3_skip_connection:\n", '-'*40, '\n')
-        print(current_up3)
-        print(DB3_skip_connection)
         ########################################################################
 
         # TODO (3.3) - incorporate a upsample function which takes the features from TODO (3.2)
@@ -269,20 +231,15 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       current_up4 -- 16x
         ########################################################################
-        upscale_factor = 4
-        n_channels = 120
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Upscale the remaining 4x
-        current_up4 = slim.conv2d_transpose(current_up3, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config3_16x_current_up4")
-        current_up4 = tf.nn.relu(current_up4)
+        #current_up4 = slim.conv2d_transpose(current_up3, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="config3_16x_current_up4")
+        #current_up4 = tf.nn.relu(current_up4)
+        current_up4 = TransitionUp_elu(current_up3, 120, 4,  "config2_1x_current_up5")
 
         #--- crop if bigger
-        if shape(current_up4)[1:2] > shape(self.tgt_image)[1:2] :
-          current_up4 = crop(current_up4, self.tgt_image)
+        current_up4 = crop(current_up4, self.tgt_image)
 
-        print('-'*40, "\nConfig 3 -- current_up4:\n", '-'*40, '\n')
-        print(current_up4)
         ########################################################################
 
         End_maps_decoder1 = slim.conv2d(current_up4, self.N_classes, [1, 1], scope='Final_decoder') #(batchsize, width, height, N_classes)
@@ -309,29 +266,21 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       DB4_skip_connection -- 2x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 256
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up5 = slim.conv2d_transpose(x, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up5")
-        current_up5 = TransitionUp_elu(x, n_channels , upscale_factor,  "config4_2x_current_up5")
+        current_up5 = TransitionUp_elu(x, 256, 2,  "config4_2x_current_up5")
 
         #--- crop the bigger
-        if shape(current_up5)[1:2] > shape(DB4_skip_connection)[1:2] :
-          current_up5 = crop(current_up5, DB4_skip_connection)
-        elif shape(current_up5)[1:2] < shape(DB4_skip_connection)[1:2] :
-          DB4_skip_connection = crop(DB4_skip_connection, current_up5)
+        current_up5 = crop(current_up5, DB4_skip_connection)
+        DB4_skip_connection = crop(DB4_skip_connection, current_up5)
 
         #--- Complying with Figure 1. Concatenation
         current_up5 = Concat_layers(current_up5, DB4_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up5 = slim.conv2d(current_up5, n_channels, [3, 3], scope='config3_2x_conv')
+        current_up5 = slim.conv2d(current_up5, 256, [3, 3], scope='config3_2x_conv')
 
-        print('-'*40, "\nConfig 4 -- DB4_skip_connection:\n", '-'*40, '\n')
-        print(current_up5)
-        print(DB4_skip_connection)
         ########################################################################
 
 
@@ -340,29 +289,21 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       DB3_skip_connection -- 4x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 160
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up3 = slim.conv2d_transpose(current_up5, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up3")
-        current_up3 = TransitionUp_elu(current_up5, n_channels , upscale_factor,  "config4_4x_current_up3")
+        current_up3 = TransitionUp_elu(current_up5, 160 , 2,  "config4_4x_current_up3")
 
         #--- crop the bigger
-        if shape(current_up3)[1:2] > shape(DB3_skip_connection)[1:2] :
-          current_up3 = crop(current_up3, DB3_skip_connection)
-        elif shape(current_up3)[1:2] < shape(DB3_skip_connection)[1:2] :
-          DB3_skip_connection = crop(DB3_skip_connection, current_up3)
+        current_up3 = crop(current_up3, DB3_skip_connection)
+        DB3_skip_connection = crop(DB3_skip_connection, current_up3)
 
         #--- Complying with Figure 1. Concatenation
         current_up3 = Concat_layers(current_up3, DB3_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up3 = slim.conv2d(current_up3, n_channels, [3, 3], scope='config3_4x_conv')
+        current_up3 = slim.conv2d(current_up3, 160, [3, 3], scope='config3_4x_conv')
 
-        print('-'*40, "\nConfig 4 -- DB3_skip_connection:\n", '-'*40, '\n')
-        print(current_up3)
-        print(DB3_skip_connection)
         ########################################################################
 
         # TODO (4.3) - Repeat TODO(4.2) now producing 96 output feature maps and fusing the upsampled features
@@ -371,28 +312,20 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       current_up3 -- 8x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 96
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
         #--- Complying with Figure1. Transition up elu
         #--- current_up2 = slim.conv2d_transpose(current_up3, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up2")
-        current_up2 = TransitionUp_elu(current_up3, n_channels , upscale_factor,  "config4_8x_current_up2")
+        current_up2 = TransitionUp_elu(current_up3, 96 , 2,  "config4_8x_current_up2")
 
         #--- crop the bigger
-        if shape(current_up2)[1:2] > shape(DB2_skip_connection)[1:2] :
-          current_up2 = crop(current_up2, DB2_skip_connection)
-        elif shape(current_up2)[1:2] < shape(DB2_skip_connection)[1:2] :
-          DB2_skip_connection = crop(DB2_skip_connection, current_up2)
+        current_up2 = crop(current_up2, DB2_skip_connection)
+        DB2_skip_connection = crop(DB2_skip_connection, current_up2)
 
         #--- Complying with Figure 1. Concatenation
         current_up2 = Concat_layers(current_up2, DB2_skip_connection)
 
         #--- Complying with Figure 1. Convolution
-        current_up2 = slim.conv2d(current_up2, n_channels, [3, 3], scope='config4_8x_conv')
-        print('-'*40, "\nConfig 4 -- DB2_skip_connection:\n", '-'*40, '\n')
-        print(current_up2)
-        print(DB2_skip_connection)
+        current_up2 = slim.conv2d(current_up2, 96, [3, 3], scope='config4_8x_conv')
         ########################################################################
 
         # TODO (4.4) - incorporate a upsample function which takes the features from TODO(4.3)
@@ -405,21 +338,13 @@ def FCN_Seg(self, is_training=True):
         ########################################################################
         #                       current_up3 -- 16x
         ########################################################################
-        upscale_factor = 2
-        n_channels = 120
-        kernel_size = 2*upscale_factor - upscale_factor%2
 
-        current_up4 = slim.conv2d_transpose(current_up2, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up4")
-        current_up4 = tf.nn.relu(current_up4)
-
-        print("Decoder Block One dim ")
-        print(current_up4)
+        #current_up4 = slim.conv2d_transpose(current_up2, n_channels, [kernel_size, kernel_size], stride=upscale_factor,  scope="current_up4")
+        #current_up4 = tf.nn.relu(current_up4)
+        current_up4 = TransitionUp_elu(current_up2, 120, 2,  "config2_1x_current_up5")
 
         #--- crop if bigger
-        if shape(current_up4)[1:2] > shape(self.tgt_image)[1:2] :
-          current_up4 = crop(current_up4, self.tgt_image)
-        print('-'*40, "\nConfig 4 -- current_up4:\n", '-'*40, '\n')
-        print(current_up4)
+        current_up4 = crop(current_up4, self.tgt_image)
         ########################################################################
 
         End_maps_decoder1 = slim.conv2d(current_up4, self.N_classes, [1, 1], scope='Final_decoder') #(batchsize, width, height, N_classes)
