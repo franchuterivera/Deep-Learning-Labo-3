@@ -356,4 +356,3 @@ def FCN_Seg(self, is_training=True):
 
 
     return Reshaped_map
-
